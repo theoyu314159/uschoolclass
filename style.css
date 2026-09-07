@@ -248,3 +248,23 @@
     transform:translate(-50%,-50%) scale(1.06);
     opacity:.95;
   }
+
+
+  /* ---------- Discrete Footer ---------- */
+.site-footer {
+  text-align: center;
+  padding: 8px 0;
+  font-size: 0.65rem;
+  opacity: 0.25; /* 降低整體透明度，使其極不明顯 */
+  transition: opacity 0.3s ease;
+}
+
+.site-footer:hover {
+  opacity: 0.5; /* 滑鼠移上去時微幅顯示，若想完全隱形可移除此段 */
+}
+
+.site-footer a {
+  color: var(--ink-soft); /* 使用與背景相近的低對比顏色 */
+  text-decoration: none;
+  letter-spacing: 0.05em;
+}
