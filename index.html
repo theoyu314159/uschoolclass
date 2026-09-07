@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>竹北實驗排課模擬系統</title>
+<link rel="icon" href="https://i.meee.com.tw/9A7xDcC.png" type="image/x-icon">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <button class="reset-btn" id="resetBtn">↺ 重新</button>
+    <h1>竹北實驗高中排課模擬系統<span id="levelLabel">第一關・國數英</span></h1>
+    <div class="level-progress" id="levelProgress"></div>
+  </header>
+
+  <main>
+    <aside class="course-pool">
+      <div class="pool-hint">請把左邊的選修課想選修依時間的填入右邊的表格中，若時間對不上會震動提醒。</div>
+      <div id="coursePool"></div>
+    </aside>
+
+    <section class="schedule-wrap">
+      <div class="schedule-grid" id="scheduleGrid"></div>
+    </section>
+  </main>
+</div>
+
+<div id="ghost" hidden></div>
+<div id="toast" class="toast"></div>
+
+
+<script src="script.js"></script>
+</body>
+</html>
