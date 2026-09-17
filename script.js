@@ -3,22 +3,57 @@
    ========================================================================= */
 
 // 用「陣列」照順序放每一關的內容，玩家會照順序一關一關過。
-// count：這門課一週要排幾節（=左邊會出現幾張卡）。
+// count：這門課一週要排幾節（=左邊這疊卡片有幾張）。
 // allowedSlots（可省略）：如果這門課有固定節次，只能拖到列出的格子，
 //   格式是 { day, period }，day 1~5 = 星期一~五，period 1~8 =第幾節。
 //   不寫這個欄位的話，代表可以拖到任何空格。
+// group（可省略）：同一個 group 裡的課互相排斥——只要選了其中一堂（拖了至少一節進課表），
+//   同一組的其他課就會在左邊被鎖住、不能再拖，直到你把已選的那堂完全移除為止。
+//   典型用法：同一科目的能力分組 A/B/C 班，只能三選一，通常時段也會一樣。
+// letter（可省略）：跨科的字母限制——同一關裡，A/B/C 這種字母只能被一個科目用掉。
+//   例如選了國文A，數學、英文的 A 版本就會被鎖住（但數學、英文的 B、C 還是可以選）。
+//   要有這個限制的課，記得同時給 group（分辨科目）跟 letter（分辨是A/B/C哪一個）。
 const COURSE_LEVELS = [
   {
     label: '第一關・國數英',
     courses: [
       {
-        id: 'chinese', name: '國文A', color: '#C1543C', count: 3,
+        id: 'chinese-a', name: '國文A', color: '#C1543C', count: 3, group: 'chinese', letter: 'A',
         allowedSlots: [ {day:1, period:1}, {day:1, period:2}, {day:5, period:8} ]
       },
-      { id: 'math',    name: '數學B', color: '#3B6EA5', count: 3, 
-        allowedSlots: [ {day:1, period:5}, {day:2, period:1}, {day:2, period:2} ]},
-      { id: 'english', name: '英文C', color: '#4C8C5B', count: 2, 
-        allowedSlots: [ {day:4, period:7}, {day:5, period:7}]},
+      {
+        id: 'chinese-b', name: '國文B', color: '#C1543C', count: 3, group: 'chinese', letter: 'B',
+        allowedSlots: [ {day:1, period:1}, {day:1, period:2}, {day:5, period:8} ]
+      },
+      {
+        id: 'chinese-c', name: '國文C', color: '#C1543C', count: 3, group: 'chinese', letter: 'C',
+        allowedSlots: [ {day:1, period:1}, {day:1, period:2}, {day:5, period:8} ]
+      },
+      {
+        id: 'math-a', name: '數學A', color: '#3B6EA5', count: 3, group: 'math', letter: 'A',
+        allowedSlots: [ {day:1, period:5}, {day:2, period:1}, {day:2, period:2} ]
+      },
+      {
+        id: 'math-b', name: '數學B', color: '#3B6EA5', count: 3, group: 'math', letter: 'B',
+        allowedSlots: [ {day:1, period:5}, {day:2, period:1}, {day:2, period:2} ]
+      },
+      {
+        id: 'math-c', name: '數學C', color: '#3B6EA5', count: 3, group: 'math', letter: 'C',
+        allowedSlots: [ {day:1, period:5}, {day:2, period:1}, {day:2, period:2} ]
+      },
+      {
+        id: 'english-a', name: '英文A', color: '#4C8C5B', count: 2, group: 'english', letter: 'A',
+        allowedSlots: [ {day:4, period:7}, {day:5, period:7} ]
+      },
+      {
+        id: 'english-b', name: '英文B', color: '#4C8C5B', count: 2, group: 'english', letter: 'B',
+        allowedSlots: [ {day:4, period:7}, {day:5, period:7} ]
+      },
+      {
+        id: 'english-c', name: '英文C', color: '#4C8C5B', count: 2, group: 'english', letter: 'C',
+        allowedSlots: [ {day:4, period:7}, {day:5, period:7} ]
+      },
+      // 要加同科的另一個分組，複製上面一份，id 一定要改、group 要跟同科的一樣、letter 要跟A/B/C對上
     ]
   },
   {
@@ -216,39 +251,107 @@ function attachCellDrop(cell){
 
 function renderPool(){
   pool.innerHTML = '';
-  levelLabel.textContent = COURSE_LEVELS[currentLevelIndex] ? COURSE_LEVELS[currentLevelIndex].label : '全部完成';
+  const level = COURSE_LEVELS[currentLevelIndex];
+  levelLabel.textContent = level ? level.label : '全部完成';
+  if(!level) return;
 
-  const items = poolItems[currentLevelIndex];
+  const remainingItems = poolItems[currentLevelIndex] || [];
+  let anyVisible = false;
 
-  if(!items || items.length === 0){
+  level.courses.forEach(course => {
+    const itemsOfCourse = remainingItems.filter(it => it.id === course.id);
+    if(itemsOfCourse.length === 0) return; // 這門課的卡片都拖完了，不用再顯示
+    anyVisible = true;
+    pool.appendChild(buildStackEl(course, itemsOfCourse, getLockReason(course, currentLevelIndex)));
+  });
+
+  if(!anyVisible){
     const done = document.createElement('div');
     done.className = 'pool-empty';
     done.textContent = '這一關的課程卡片都排完了。';
     pool.appendChild(done);
-    return;
+  }
+}
+
+// 算出某門課目前被排掉幾節
+function placedCountOf(course, levelIndex){
+  const remaining = (poolItems[levelIndex] || []).filter(it => it.id === course.id).length;
+  return course.count - remaining;
+}
+
+// 這門課如果被鎖住，回傳要顯示的鎖定原因；沒被鎖就回傳 null
+function getLockReason(course, levelIndex){
+  const level = COURSE_LEVELS[levelIndex];
+  if(!level) return null;
+
+  // 規則一：同一個 group（同科目）只能三選一
+  if(course.group){
+    const sameGroupChosen = level.courses.some(other =>
+      other.id !== course.id && other.group === course.group && placedCountOf(other, levelIndex) > 0
+    );
+    if(sameGroupChosen) return '🔒 已選同科其他班';
   }
 
-  items.forEach((item, i) => {
-    const course = findCourseDef(item.id, item.levelIndex);
-    const chip = document.createElement('div');
-    chip.className = 'chip';
-    chip.style.background = item.color;
-    chip.style.setProperty('--tilt', (i % 2 === 0 ? '-1.2deg' : '1.2deg'));
+  // 規則二：同一個字母（A/B/C）跨科不能重複用
+  if(course.letter){
+    const sameLetterChosen = level.courses.some(other =>
+      other.id !== course.id && other.group !== course.group && other.letter === course.letter
+      && placedCountOf(other, levelIndex) > 0
+    );
+    if(sameLetterChosen) return '🔒 這個字母已被別科用掉';
+  }
 
-    const nameEl = document.createElement('div');
-    nameEl.textContent = item.name;
-    chip.appendChild(nameEl);
+  return null;
+}
 
-    if(course && course.allowedSlots){
-      const slotEl = document.createElement('div');
-      slotEl.className = 'chip-slot';
-      slotEl.textContent = formatSlots(course.allowedSlots);
-      chip.appendChild(slotEl);
-    }
+// 把同一門課的所有剩餘卡片畫成一疊，拖一次就從疊上面拿一張、疊變薄
+function buildStackEl(course, itemsOfCourse, lockReason){
+  const locked = !!lockReason;
+  const wrap = document.createElement('div');
+  wrap.className = 'stack' + (locked ? ' stack-locked' : '');
 
-    chip.addEventListener('pointerdown', e => startDrag(e, item, null, true));
-    pool.appendChild(chip);
-  });
+  const shadowCount = Math.min(itemsOfCourse.length - 1, 2);
+  for(let i = shadowCount; i >= 1; i--){
+    const shadow = document.createElement('div');
+    shadow.className = 'stack-shadow';
+    shadow.style.background = course.color;
+    shadow.style.transform = `translateY(${i * 4}px)`;
+    wrap.appendChild(shadow);
+  }
+
+  const top = document.createElement('div');
+  top.className = 'chip stack-top';
+  top.style.background = course.color;
+
+  const nameEl = document.createElement('div');
+  nameEl.textContent = course.name;
+  top.appendChild(nameEl);
+
+  if(course.allowedSlots){
+    const slotEl = document.createElement('div');
+    slotEl.className = 'chip-slot';
+    slotEl.textContent = formatSlots(course.allowedSlots);
+    top.appendChild(slotEl);
+  }
+
+  if(itemsOfCourse.length > 1){
+    const badge = document.createElement('div');
+    badge.className = 'stack-count';
+    badge.textContent = '×' + itemsOfCourse.length;
+    top.appendChild(badge);
+  }
+
+  if(locked){
+    const lockNote = document.createElement('div');
+    lockNote.className = 'chip-slot';
+    lockNote.textContent = lockReason;
+    top.appendChild(lockNote);
+  } else {
+    top.addEventListener('pointerdown', e => startDrag(e, itemsOfCourse[0], null, true));
+  }
+
+  wrap.appendChild(top);
+  return wrap;
 }
 
 // 把 allowedSlots 轉成看得懂的文字，例如「一 第1節、三 第1節、五 第1節」

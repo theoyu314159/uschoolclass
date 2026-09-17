@@ -1,4 +1,4 @@
-  :root{
+:root{
     --paper:#EEF3EF;
     --paper-cell:#FBFCFA;
     --ink:#16241C;
@@ -14,6 +14,7 @@
 
   html,body{
     margin:0; padding:0; height:100%;
+    overflow:hidden;
     background:var(--paper);
     color:var(--ink);
     font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",sans-serif;
@@ -23,7 +24,7 @@
   .app{
     display:flex;
     flex-direction:column;
-    min-height:100vh;
+    height:100vh;
     padding:20px 28px 28px;
     gap:18px;
   }
@@ -111,6 +112,9 @@
     display:flex;
     flex-direction:column;
     gap:14px;
+    min-height:0;
+    overflow-y:auto;
+    padding-right:6px;
   }
   .pool-hint{
     font-size:.85rem;
@@ -144,6 +148,43 @@
     color:rgba(255,255,255,.85);
     letter-spacing:.02em;
   }
+
+  /* ---------- 課程堆疊（同一門課多節疊在一起） ---------- */
+  .stack{
+    position:relative;
+    margin-bottom: 8px;
+  }
+  .stack-shadow{
+    position:absolute;
+    inset:0;
+    border-radius:var(--radius);
+    opacity:.45;
+    z-index:0;
+  }
+  .stack-top{
+    position:relative;
+    z-index:1;
+    margin:0;
+  }
+  .stack-count{
+    position:absolute;
+    top:-8px;
+    right:-8px;
+    background:var(--ink);
+    color:#fff;
+    font-size:.72rem;
+    font-weight:800;
+    padding:3px 8px;
+    border-radius:999px;
+    box-shadow:0 2px 5px rgba(0,0,0,.3);
+    z-index:2;
+  }
+  .stack-locked .stack-top{
+    opacity:.45;
+    cursor:not-allowed;
+    filter:grayscale(35%);
+  }
+  .stack-locked .stack-top:hover{ transform:rotate(var(--tilt,0deg)); }
 
   .schedule-wrap{
     flex:1;
@@ -252,11 +293,15 @@
 
   /* ---------- Discrete Footer ---------- */
 .site-footer {
-  text-align: center;
-  padding: 8px 0;
+  position: fixed;
+  right: 14px;
+  bottom: 6px;
+  text-align: right;
+  padding: 4px 6px;
   font-size: 0.65rem;
   opacity: 0.25; /* 降低整體透明度，使其極不明顯 */
   transition: opacity 0.3s ease;
+  z-index: 5;
 }
 
 .site-footer:hover {
