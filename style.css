@@ -126,7 +126,6 @@
   }
 
   .chip{
-    touch-action:none;
     user-select:none;
     color:#fff;
     font-weight:700;
@@ -135,12 +134,16 @@
     padding:16px 10px;
     border-radius:var(--radius);
     box-shadow:0 3px 0 rgba(0,0,0,.18);
-    cursor:grab;
     transform:rotate(var(--tilt,0deg));
     transition:transform .12s ease;
   }
-  .chip:active{ cursor:grabbing; }
   .chip:hover{ transform:rotate(var(--tilt,0deg)) translateY(-2px); }
+  /* 選修課程：點一下直接排好全部堂數 */
+  .chip.chip-clickable{ cursor:pointer; }
+  .chip.chip-clickable:active{ transform:rotate(var(--tilt,0deg)) translateY(1px); }
+  /* 社團、非同步課程：維持拖曳 */
+  .chip.chip-draggable{ cursor:grab; touch-action:none; }
+  .chip.chip-draggable:active{ cursor:grabbing; }
   .chip-slot{
     margin-top:4px;
     font-size:.72rem;
@@ -254,10 +257,15 @@
     align-items:center;
     justify-content:center;
     text-align:center;
-    cursor:grab;
+    cursor:default;
     box-shadow:0 2px 0 rgba(0,0,0,.15);
     padding:4px;
   }
+  .placed-chip.draggable{
+    cursor:grab;
+    touch-action:none;
+  }
+  .placed-chip.draggable:active{ cursor:grabbing; }
   .placed-chip.locked{
     cursor:default;
     background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.15) 0 8px, rgba(255,255,255,0) 8px 16px);
@@ -275,7 +283,7 @@
   }
   .placed-chip .lock-icon{ position:absolute; top:3px; right:5px; font-size:.8rem; opacity:.8; }
 
-  /* ---------- Drag ghost ---------- */
+  /* ---------- Drag ghost（社團／非同步課程拖曳時的預覽） ---------- */
   #ghost{
     position:fixed;
     z-index:999;
@@ -289,7 +297,6 @@
     transform:translate(-50%,-50%) scale(1.06);
     opacity:.95;
   }
-
 
   /* ---------- Discrete Footer ---------- */
 .site-footer {
@@ -312,4 +319,134 @@
   color: var(--ink-soft); /* 使用與背景相近的低對比顏色 */
   text-decoration: none;
   letter-spacing: 0.05em;
+}
+/* ---------- 手機版版面（≤820px） ---------- */
+@media (max-width: 820px){
+  html,body{
+    overflow:auto;
+    height:auto;
+  }
+
+  .app{
+    height:auto;
+    min-height:100vh;
+    padding:14px 12px 90px;
+    gap:12px;
+  }
+
+  header{
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+  }
+
+  .reset-btn{
+    align-self:center;
+    padding:9px 18px;
+    font-size:.9rem;
+  }
+
+  h1{
+    font-size:1.1rem;
+    text-align:center;
+  }
+  h1 span{ margin-top:4px; }
+
+  .level-progress{
+    justify-content:center;
+    flex-wrap:wrap;
+    row-gap:6px;
+  }
+  .level-step{ padding:6px 10px; font-size:.78rem; }
+  .next-btn{ padding:7px 12px; font-size:.8rem; margin-left:0; }
+
+  main{
+    flex-direction:column;
+    gap:12px;
+    flex:none;
+  }
+
+  /* 課程清單改成上方可橫向滑動的一排 */
+  .course-pool{
+    width:100%;
+    flex-direction:row;
+    align-items:flex-start;
+    overflow-x:auto;
+    overflow-y:visible;
+    -webkit-overflow-scrolling:touch;
+    padding:0 2px 8px;
+    gap:10px;
+  }
+  .pool-hint{
+    flex-shrink:0;
+    width:120px;
+    font-size:.72rem;
+    border-bottom:none;
+    border-right:1px dashed var(--line);
+    margin-bottom:0;
+    padding:2px 10px 2px 2px;
+  }
+  .pool-empty{ white-space:nowrap; }
+
+  .stack{
+    flex-shrink:0;
+    width:104px;
+    margin-bottom:0;
+  }
+  .chip{
+    padding:10px 8px;
+    font-size:.85rem;
+  }
+  .chip-slot{ font-size:.62rem; }
+  .stack-count{
+    top:-6px; right:-6px;
+    font-size:.62rem;
+    padding:2px 6px;
+  }
+
+  .schedule-wrap{ min-width:0; }
+
+  .schedule-grid{
+    grid-template-columns: 40px repeat(5, minmax(50px, 1fr));
+    grid-template-rows: 32px repeat(8, 44px);
+    gap:3px;
+    border-width:3px;
+    overflow-x:auto;
+  }
+
+  .head-cell{ font-size:.72rem; }
+  .period-cell{ font-size:.66rem; }
+  .period-cell small{ font-size:.56rem; }
+
+  .placed-chip{
+    inset:2px;
+    font-size:.66rem;
+    padding:2px;
+    border-radius:6px;
+  }
+  .placed-chip .remove-btn{
+    width:16px; height:16px;
+    font-size:.62rem;
+    line-height:16px;
+    top:1px; right:2px;
+  }
+  .placed-chip .lock-icon{ font-size:.62rem; top:1px; right:2px; }
+
+  .toast{
+    top:auto;
+    bottom:16px;
+    left:50%;
+    transform:translate(-50%,10px);
+    font-size:.95rem;
+    padding:10px 18px;
+    max-width:90vw;
+  }
+  .toast.show{ transform:translate(-50%,0); }
+
+  .site-footer{
+    position:static;
+    text-align:center;
+    margin-top:10px;
+    opacity:.35;
+  }
 }
