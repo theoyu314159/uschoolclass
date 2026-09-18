@@ -100,14 +100,15 @@ const COURSE_LEVELS = [
 const LEVEL3_STATIC_COURSES = COURSE_LEVELS[2].courses.slice();
 
 // 非同步線上課程設定：國文/數學/英文只要在第一關選了任何一個 A/B/C 班，
-// 社會只要在第二關選了公民或歷史（其中一項），物理/化學只要在第三關選了該科，
+// 公民、歷史只要在第二關各自被選了，物理/化學只要在第三關選了該科，
 // 第三關就會自動出現對應這科的「非同步」卡片，讓玩家自己拖去空堂排入。
 // count：這科的非同步課要排幾節。
 const ASYNC_COURSE_DEFS = {
   chinese:   { name: '國文（非同步）', color: '#C1543C', count: 1 },
   math:      { name: '數學（非同步）', color: '#3B6EA5', count: 1 },
-  english:   { name: '英文（非同步）', color: '#4C8C5B', count: 1 },
-  social:    { name: '社會（非同步）', color: '#6B5B95', count: 1 },
+  english:   { name: '英文（非同步）', color: '#4C8C5B', count: 2 },
+  civics:    { name: '公民（非同步）', color: '#6B5B95', count: 2 },
+  history:   { name: '歷史（非同步）', color: '#A6A600', count: 1 },
   physics:   { name: '物理（非同步）', color: '#345E9E', count: 2 },
   chemistry: { name: '化學（非同步）', color: '#C97B3D', count: 2 },
 };
@@ -132,7 +133,7 @@ const PERIOD_COUNT = 8;
 const RANDOM_INTERESTS = [
   '喜歡寫程式',
   '喜歡跳舞',
-  '喜歡做理化實驗',
+  '喜歡打籃球',
   '喜歡畫畫',
   '喜歡拉小提琴',
 ];
@@ -475,7 +476,7 @@ function findCourseDef(id, levelIndex){
 /* ---------------- 非同步課程：依第一、二關的選課結果動態決定 ---------------- */
 
 // 算出目前已經選定的科目：國文/數學/英文（第一關，只要選了 A/B/C 其中一班），
-// 社會（第二關，只要選了公民或歷史其中一項）。
+// 公民、歷史（第二關，各自獨立判斷）。
 function computeChosenSubjects(){
   const chosen = new Set();
 
@@ -491,8 +492,10 @@ function computeChosenSubjects(){
   });
 
   const level2 = COURSE_LEVELS[1];
-  const anySocialPlaced = level2.courses.some(c => placedCountOf(c, 1) > 0);
-  if(anySocialPlaced) chosen.add('social');
+  const civicsCourse = level2.courses.find(c => c.id === 'techlife');
+  const historyCourse = level2.courses.find(c => c.id === 'history');
+  if(civicsCourse && placedCountOf(civicsCourse, 1) > 0) chosen.add('civics');
+  if(historyCourse && placedCountOf(historyCourse, 1) > 0) chosen.add('history');
 
   // 第三關本身選修的物理／化學，選了也各自帶出非同步課程
   const physicsCourse = LEVEL3_STATIC_COURSES.find(c => c.id === 'physics');
@@ -501,12 +504,6 @@ function computeChosenSubjects(){
   if(chemistryCourse && placedCountOf(chemistryCourse, 2) > 0) chosen.add('chemistry');
 
   return chosen;
-}
-
-function isCoursePlacedOnGrid(id, levelIndex){
-  return Array.from(document.querySelectorAll('.schedule-cell')).some(cell =>
-    cell._payload && cell._payload.id === id && cell._payload.levelIndex === levelIndex
-  );
 }
 
 function clearGridCoursesById(id, levelIndex){
@@ -537,9 +534,11 @@ function refreshLevel3Courses(){
   COURSE_LEVELS[2].courses = [...LEVEL3_STATIC_COURSES, ...desired];
 
   desired.forEach(course => {
-    const inPool = (poolItems[2] || []).some(it => it.id === course.id);
-    const onGrid = isCoursePlacedOnGrid(course.id, 2);
-    if(!inPool && !onGrid){
+    const inPoolCount = (poolItems[2] || []).filter(it => it.id === course.id).length;
+    const onGridCount = Array.from(document.querySelectorAll('.schedule-cell'))
+      .filter(cell => cell._payload && cell._payload.id === course.id && cell._payload.levelIndex === 2).length;
+    const missing = course.count - inPoolCount - onGridCount;
+    for(let i = 0; i < missing; i++){
       poolItems[2].push({ uid: 'item-' + (uidCounter++), id: course.id, name: course.name, color: course.color, levelIndex: 2 });
     }
   });
