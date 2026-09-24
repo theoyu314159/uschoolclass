@@ -603,12 +603,12 @@ function startDrag(e, payload, sourceCell, fromPool){
   window.addEventListener('pointermove', onDragMove);
   window.addEventListener('pointerup', onDragEnd);
 }
-
+ 
 function moveGhost(x, y){
   ghost.style.left = x + 'px';
   ghost.style.top = y + 'px';
 }
-
+ 
 function cellAt(x, y){
   const el = document.elementFromPoint(x, y);
   return el ? el.closest('.schedule-cell') : null;
