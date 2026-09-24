@@ -3,75 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>家長日 Party 的食物分配系統</title>
+<title>竹北實驗排課模擬系統</title>
+<link rel="icon" href="https://i.meee.com.tw/9A7xDcC.png" type="image/x-icon">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header>
-  <h1>🎉 家長日 Party 的食物分配系統</h1>
-  <p>活動時間：2026/10/02　各書院請依主題帶餐點，避免重複喔！</p>
-</header>
+<div class="app">
+  <header>
+    <button class="reset-btn" id="resetBtn">↺ 重新</button>
+    <h1>竹北實驗高中排課模擬系統<span id="levelLabel">第一關・國數英</span></h1>
+    <div class="level-progress" id="levelProgress"></div>
+  </header>
 
-<main>
+  <main>
+    <aside class="course-pool">
+      <div class="pool-hint">選修課程點一下會自動排好全部堂數；社團、非同步課程請拖曳到課表中。ABC不可重複。</div>
+      <div id="coursePool"></div>
+    </aside>
 
-  <div class="tip-card">
-    <strong>💡小提醒</strong>
-    <p>歡迎大家準備一些獨特、不一樣的食物，讓 Party 的食物更加多樣化，大家也能吃到更多平常比較少見的美食！</p>
-    <p>如果自己不方便準備特別的料理也沒關係，也很歡迎帶一些方便準備、好吃的食物，例如日式壽司等。</p>
-    <p>不一定要從推薦清單中選擇，只要是適合分享的食物都可以！ 🍣</p>
-  </div>
+    <section class="schedule-wrap">
+      <div class="schedule-grid" id="scheduleGrid"></div>
+    </section>
+  </main>
+</div>
 
-  <section class="card">
-    <h2>Step 1・選擇你的書院</h2>
-    <div class="house-grid" id="houseGrid"></div>
-  </section>
+<div id="ghost" hidden></div>
+<div id="toast" class="toast"></div>
 
-  <section class="card" id="formCard" style="display:none;">
-    <h2>Step 2・填寫你要帶的餐點</h2>
-    <p class="hint" id="categoryHint"></p>
-    <input type="text" id="studentIdInput" placeholder="請輸入孩子的學號" maxlength="20">
-    <input type="text" id="dishInput" placeholder="輸入餐點名稱，或點下面的推薦項目" maxlength="40">
-    <div class="chip-list" id="chipList"></div>
-    <button class="primary" id="submitBtn">送出</button>
-    <div class="msg" id="formMsg"></div>
-  </section>
+<!-- 新增極不顯眼的頁尾 -->
+  <footer class="site-footer">
+    <a href="https://uschool.hcc.edu.tw/" target="_blank" rel="noopener noreferrer">Design by - 竹北實驗高中</a> & <a href="https://theoyu314159.github.io/" target="_blank" rel="noopener noreferrer">Yuyoru</a>
+  </footer>
 
-  <section class="card">
-    <div class="refresh-row">
-      <h2 style="margin:0;">目前大家填寫的餐點</h2>
-      <button id="refreshBtn">🔄 重新整理</button>
-    </div>
-    <div id="listArea"><div class="loading">載入中…</div></div>
-  </section>
-
-</main>
-
-<dialog id="codeDialog">
-  <div class="dialog-body">
-    <h3>請輸入活動通關密語</h3>
-    <p class="hint">請向老師／家長會索取通關密語，這是用來防止陌生人亂填的簡單保護。</p>
-    <input type="text" id="codeInput" placeholder="通關密語">
-    <div class="dialog-actions">
-      <button id="codeCancel">取消</button>
-      <button class="confirm" id="codeConfirm">確認</button>
-    </div>
-  </div>
-</dialog>
-
-<dialog id="editDialog">
-  <div class="dialog-body">
-    <h3>編輯你的餐點</h3>
-    <input type="text" id="editInput" maxlength="40">
-    <div class="msg error" id="editMsg"></div>
-    <div class="dialog-actions">
-      <button id="editCancel">取消</button>
-      <button class="confirm" id="editConfirm">儲存</button>
-    </div>
-  </div>
-</dialog>
 
 <script src="script.js"></script>
-
 </body>
 </html>

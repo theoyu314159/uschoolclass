@@ -1,34 +1,96 @@
-/* ====== 這裡改成你部署好的 Google Apps Script「Web 應用程式」網址 ====== */
-/* 長得像 https://script.google.com/macros/s/AKfycb.../exec */
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9P5SrlAacsL1Bs3h4SXmJnGpDP9g41UzuDDcOsa257-AsNXwpRp6yySGXDi8V6Hg/exec";
-/* ======================================================================= */
+/* =========================================================================
+   設定區：想要新增課程或關卡，只要編輯這裡就好，不用動下面的邏輯。
+   ========================================================================= */
 
-const HOUSES = {
-  "馭風書院": {
-    category: "美式餐點",
-    recommendations: ["漢堡", "熱狗", "烤雞翅", "玉米麵包", "凱薩沙拉", "蘋果派", "烤肋排", "起司通心粉", "洋蔥圈", "布朗尼"]
+// 用「陣列」照順序放每一關的內容，玩家會照順序一關一關過。
+// count：這門課一週要排幾節（=左邊這疊卡片有幾張）。
+// allowedSlots（可省略）：如果這門課有固定節次，點選後系統會自動排進第一個還空著的格子，
+//   格式是 { day, period }，day 1~5 = 星期一~五，period 1~8 =第幾節。
+//   不寫這個欄位的話，代表可以自由排到任何空格（系統會自動找目前最早的空堂）。
+// group（可省略）：同一個 group 裡的課互相排斥——只要選了其中一堂（點了至少一節進課表），
+//   同一組的其他課就會在左邊被鎖住、不能再選，直到你把已選的那堂完全移除為止。
+//   典型用法：同一科目的能力分組 A/B/C 班，只能三選一，通常時段也會一樣。
+// letter（可省略）：跨科的字母限制——同一關裡，A/B/C 這種字母只能被一個科目用掉。
+//   例如選了國文A，數學、英文的 A 版本就會被鎖住（但數學、英文的 B、C 還是可以選）。
+//   要有這個限制的課，記得同時給 group（分辨科目）跟 letter（分辨是A/B/C哪一個）。
+const COURSE_LEVELS = [
+  {
+    label: '第一關・國數英',
+    courses: [
+      {
+        id: 'chinese-a', name: '國文A', color: '#C1543C', count: 3, group: 'chinese', letter: 'A',
+        allowedSlots: [ {day:1, period:1}, {day:1, period:2}, {day:5, period:8} ]
+      },
+      {
+        id: 'chinese-b', name: '國文B', color: '#C1543C', count: 3, group: 'chinese', letter: 'B',
+        allowedSlots: [ {day:1, period:1}, {day:1, period:2}, {day:5, period:8} ]
+      },
+      {
+        id: 'chinese-c', name: '國文C', color: '#C1543C', count: 3, group: 'chinese', letter: 'C',
+        allowedSlots: [ {day:1, period:1}, {day:1, period:2}, {day:5, period:8} ]
+      },
+      {
+        id: 'math-a', name: '數學A', color: '#3B6EA5', count: 3, group: 'math', letter: 'A',
+        allowedSlots: [ {day:1, period:5}, {day:2, period:1}, {day:2, period:2} ]
+      },
+      {
+        id: 'math-b', name: '數學B', color: '#3B6EA5', count: 3, group: 'math', letter: 'B',
+        allowedSlots: [ {day:1, period:5}, {day:2, period:1}, {day:2, period:2} ]
+      },
+      {
+        id: 'math-c', name: '數學C', color: '#3B6EA5', count: 3, group: 'math', letter: 'C',
+        allowedSlots: [ {day:1, period:5}, {day:2, period:1}, {day:2, period:2} ]
+      },
+      {
+        id: 'english-a', name: '英文A', color: '#4C8C5B', count: 2, group: 'english', letter: 'A',
+        allowedSlots: [ {day:4, period:7}, {day:5, period:7} ]
+      },
+      {
+        id: 'english-b', name: '英文B', color: '#4C8C5B', count: 2, group: 'english', letter: 'B',
+        allowedSlots: [ {day:4, period:7}, {day:5, period:7} ]
+      },
+      {
+        id: 'english-c', name: '英文C', color: '#4C8C5B', count: 2, group: 'english', letter: 'C',
+        allowedSlots: [ {day:4, period:7}, {day:5, period:7} ]
+      },
+      // 要加同科的另一個分組，複製上面一份，id 一定要改、group 要跟同科的一樣、letter 要跟A/B/C對上
+    ]
   },
-  "矽晶書院": {
-    category: "中式餐點",
-    recommendations: ["滷肉飯", "蔥油餅", "水餃", "糖醋排骨", "炒麵", "小籠包", "宮保雞丁", "蒸餃", "麻婆豆腐", "春捲"]
+  {
+    label: '第二關・社會科',
+    courses: [
+      {
+        id: 'techlife', name: '公民與社會A', color: '#6B5B95', count: 1,
+        allowedSlots: [ {day:4, period:2}]
+      },
+      { id: 'history', name: '歷史B', color:"#A6A600" , count: 2, 
+        allowedSlots: [ {day:1, period:3}, {day:1, period:4}]},
+      // 之後要加課，複製上面一行，改 id / name / color / count（要固定節次再加 allowedSlots）
+    ]
   },
-  "靛織書院": {
-    category: "義式餐點",
-    recommendations: ["瑪格麗特披薩", "蛤蜊義大利麵", "提拉米蘇", "千層麵", "青醬義大利麵", "卡布里沙拉", "燉飯", "帕尼尼三明治", "義式烤蔬菜", "奶油培根義大利麵"]
-  },
-  "曦華書院": {
-    category: "台式餐點",
-    recommendations: ["滷味", "珍珠奶茶", "鹹酥雞", "蚵仔煎", "大腸包小腸", "蔥抓餅", "肉圓", "筒仔米糕", "鳳梨酥", "涼拌小黃瓜"]
+  {        
+    label: '第三關・社團與其他',
+    courses: [
+      { id: 'club',     name: '社團',     color: '#B98A3E', count: 2 },
+      {
+        id: 'techlife2', name: '資訊科技A', color: '#984B4B', count: 2,
+        allowedSlots: [ {day:5, period:1}, {day:5, period:2} ]
+      },
+      {
+        id: 'art', name: '美術', color: '#408080', count: 2,
+        allowedSlots: [ {day:5, period:5}, {day:5, period:6} ]
+      },
+      {
+        id: 'physics', name: '物理', color: '#345E9E', count: 2,
+        allowedSlots: [ {day:1, period:7}, {day:1, period:8} ]
+      },
+      {
+        id: 'chemistry', name: '化學', color: '#C97B3D', count: 2,
+        allowedSlots: [ {day:2, period:5}, {day:3, period:5} ]
+      },
+      // 之後要加課，複製上面一行，改 id / name / color / count（要固定節次再加 allowedSlots）
+    ]
   }
-<<<<<<< HEAD
-};
-
-function getDeviceId() {
-  let id = localStorage.getItem("party_device_id");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("party_device_id", id);
-=======
   // 要加「第四關」的話，照上面的格式在陣列最後面再加一個 { label, courses } 物件，
   // 其他程式碼不用改，會自動接關。
 ];
@@ -38,14 +100,15 @@ function getDeviceId() {
 const LEVEL3_STATIC_COURSES = COURSE_LEVELS[2].courses.slice();
 
 // 非同步線上課程設定：國文/數學/英文只要在第一關選了任何一個 A/B/C 班，
-// 社會只要在第二關選了公民或歷史（其中一項），物理/化學只要在第三關選了該科，
+// 公民、歷史只要在第二關各自被選了，物理/化學只要在第三關選了該科，
 // 第三關就會自動出現對應這科的「非同步」卡片，讓玩家自己拖去空堂排入。
 // count：這科的非同步課要排幾節。
 const ASYNC_COURSE_DEFS = {
   chinese:   { name: '國文（非同步）', color: '#C1543C', count: 1 },
   math:      { name: '數學（非同步）', color: '#3B6EA5', count: 1 },
-  english:   { name: '英文（非同步）', color: '#4C8C5B', count: 1 },
-  social:    { name: '社會（非同步）', color: '#6B5B95', count: 1 },
+  english:   { name: '英文（非同步）', color: '#4C8C5B', count: 2 },
+  civics:    { name: '公民（非同步）', color: '#6B5B95', count: 2 },
+  history:   { name: '歷史（非同步）', color: '#A6A600', count: 1 },
   physics:   { name: '物理（非同步）', color: '#345E9E', count: 2 },
   chemistry: { name: '化學（非同步）', color: '#C97B3D', count: 2 },
 };
@@ -70,7 +133,7 @@ const PERIOD_COUNT = 8;
 const RANDOM_INTERESTS = [
   '喜歡寫程式',
   '喜歡跳舞',
-  '喜歡做理化實驗',
+  '喜歡打籃球',
   '喜歡畫畫',
   '喜歡拉小提琴',
 ];
@@ -145,32 +208,8 @@ function buildGrid(){
 
       grid.appendChild(cell);
     }
->>>>>>> parent of f9eebfb (fix small bugs)
   }
-  return id;
 }
-<<<<<<< HEAD
-const deviceId = getDeviceId();
-
-function getPartyCode() { return localStorage.getItem("party_code") || ""; }
-function setPartyCode(code) { localStorage.setItem("party_code", code); }
-
-function getSavedStudentId() { return localStorage.getItem("party_student_id") || ""; }
-function saveStudentId(id) { localStorage.setItem("party_student_id", id); }
-
-let selectedHouse = localStorage.getItem("party_selected_house") || null;
-let currentItems = [];
-
-// ---------- 書院選擇 ----------
-const houseGrid = document.getElementById("houseGrid");
-Object.keys(HOUSES).forEach((house) => {
-  const btn = document.createElement("div");
-  btn.className = "house-btn";
-  btn.dataset.house = house;
-  btn.innerHTML = `${house}<small>${HOUSES[house].category}</small>`;
-  btn.addEventListener("click", () => selectHouse(house));
-  houseGrid.appendChild(btn);
-=======
 
 function renderChipInCell(cell, payload, locked){
   cell.dataset.occupied = 'true';
@@ -437,7 +476,7 @@ function findCourseDef(id, levelIndex){
 /* ---------------- 非同步課程：依第一、二關的選課結果動態決定 ---------------- */
 
 // 算出目前已經選定的科目：國文/數學/英文（第一關，只要選了 A/B/C 其中一班），
-// 社會（第二關，只要選了公民或歷史其中一項）。
+// 公民、歷史（第二關，各自獨立判斷）。
 function computeChosenSubjects(){
   const chosen = new Set();
 
@@ -453,8 +492,10 @@ function computeChosenSubjects(){
   });
 
   const level2 = COURSE_LEVELS[1];
-  const anySocialPlaced = level2.courses.some(c => placedCountOf(c, 1) > 0);
-  if(anySocialPlaced) chosen.add('social');
+  const civicsCourse = level2.courses.find(c => c.id === 'techlife');
+  const historyCourse = level2.courses.find(c => c.id === 'history');
+  if(civicsCourse && placedCountOf(civicsCourse, 1) > 0) chosen.add('civics');
+  if(historyCourse && placedCountOf(historyCourse, 1) > 0) chosen.add('history');
 
   // 第三關本身選修的物理／化學，選了也各自帶出非同步課程
   const physicsCourse = LEVEL3_STATIC_COURSES.find(c => c.id === 'physics');
@@ -463,12 +504,6 @@ function computeChosenSubjects(){
   if(chemistryCourse && placedCountOf(chemistryCourse, 2) > 0) chosen.add('chemistry');
 
   return chosen;
-}
-
-function isCoursePlacedOnGrid(id, levelIndex){
-  return Array.from(document.querySelectorAll('.schedule-cell')).some(cell =>
-    cell._payload && cell._payload.id === id && cell._payload.levelIndex === levelIndex
-  );
 }
 
 function clearGridCoursesById(id, levelIndex){
@@ -499,9 +534,11 @@ function refreshLevel3Courses(){
   COURSE_LEVELS[2].courses = [...LEVEL3_STATIC_COURSES, ...desired];
 
   desired.forEach(course => {
-    const inPool = (poolItems[2] || []).some(it => it.id === course.id);
-    const onGrid = isCoursePlacedOnGrid(course.id, 2);
-    if(!inPool && !onGrid){
+    const inPoolCount = (poolItems[2] || []).filter(it => it.id === course.id).length;
+    const onGridCount = Array.from(document.querySelectorAll('.schedule-cell'))
+      .filter(cell => cell._payload && cell._payload.id === course.id && cell._payload.levelIndex === 2).length;
+    const missing = course.count - inPoolCount - onGridCount;
+    for(let i = 0; i < missing; i++){
       poolItems[2].push({ uid: 'item-' + (uidCounter++), id: course.id, name: course.name, color: course.color, levelIndex: 2 });
     }
   });
@@ -635,206 +672,13 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
   const pick = RANDOM_INTERESTS[Math.floor(Math.random() * RANDOM_INTERESTS.length)];
   alert('模擬新的一位同學：' + pick);
->>>>>>> parent of f9eebfb (fix small bugs)
 });
 
-function selectHouse(house) {
-  selectedHouse = house;
-  localStorage.setItem("party_selected_house", house);
-  document.querySelectorAll(".house-btn").forEach((b) => {
-    b.classList.toggle("active", b.dataset.house === house);
-  });
-  document.getElementById("formCard").style.display = "block";
-  document.getElementById("categoryHint").textContent =
-    `你的書院是「${house}」，主題是「${HOUSES[house].category}」。下面是推薦項目，也可以自己輸入：`;
-  document.getElementById("studentIdInput").value = getSavedStudentId();
-  renderChips(house);
-}
-if (selectedHouse && HOUSES[selectedHouse]) selectHouse(selectedHouse);
+/* ---------------- 初始化 ---------------- */
 
-function renderChips(house) {
-  const chipList = document.getElementById("chipList");
-  chipList.innerHTML = "";
-  HOUSES[house].recommendations.forEach((name) => {
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    chip.textContent = name;
-    chip.addEventListener("click", () => {
-      document.getElementById("dishInput").value = name;
-    });
-    chipList.appendChild(chip);
-  });
-}
+buildGrid();
+buildPoolItems();
+renderProgress();
+renderPool();
 
-// ---------- 呼叫 Google Apps Script ----------
-// 注意：Content-Type 一定要用 text/plain，否則瀏覽器會送出 CORS 預檢請求，
-// 而 Apps Script 的 Web App 不處理預檢，會導致失敗。
-function callScript(action, payload) {
-  return fetch(SCRIPT_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action, code: getPartyCode(), ...payload }),
-  }).then((res) => res.json());
-}
-
-// ---------- 送出新餐點 ----------
-document.getElementById("submitBtn").addEventListener("click", async () => {
-  const studentId = document.getElementById("studentIdInput").value.trim();
-  const dish = document.getElementById("dishInput").value.trim();
-  const msgEl = document.getElementById("formMsg");
-  msgEl.textContent = "";
-  msgEl.className = "msg";
-
-  if (!selectedHouse) { msgEl.textContent = "請先選擇書院"; msgEl.className = "msg error"; return; }
-  if (!studentId) { msgEl.textContent = "請輸入孩子的學號"; msgEl.className = "msg error"; return; }
-  if (!dish) { msgEl.textContent = "請輸入餐點名稱"; msgEl.className = "msg error"; return; }
-
-  const dup = currentItems.some((it) => String(it.dish || "").trim().toLowerCase() === dish.toLowerCase());
-  if (dup) { msgEl.textContent = "這道菜已經有人填寫了，換一個吧！"; msgEl.className = "msg error"; return; }
-
-  await ensurePartyCode(async () => {
-    document.getElementById("submitBtn").disabled = true;
-    try {
-      const data = await callScript("add", { house: selectedHouse, dish, studentId, deviceId });
-      if (data.item) {
-        saveStudentId(studentId);
-        document.getElementById("dishInput").value = "";
-        msgEl.textContent = "填寫成功！";
-        msgEl.className = "msg ok";
-        await loadItems();
-      } else {
-        msgEl.textContent = data.error || "送出失敗，請再試一次";
-        msgEl.className = "msg error";
-      }
-    } catch (e) {
-      msgEl.textContent = "網路連線異常，請稍後再試";
-      msgEl.className = "msg error";
-    } finally {
-      document.getElementById("submitBtn").disabled = false;
-    }
-  });
-});
-
-// ---------- 通關密語 ----------
-function ensurePartyCode(callback) {
-  return new Promise((resolve) => {
-    const existing = getPartyCode();
-    if (existing) { callback().then(resolve); return; }
-    const dialog = document.getElementById("codeDialog");
-    dialog.showModal();
-    const onConfirm = () => {
-      const code = document.getElementById("codeInput").value.trim();
-      if (code) setPartyCode(code);
-      dialog.close();
-      cleanup();
-      callback().then(resolve);
-    };
-    const onCancel = () => { dialog.close(); cleanup(); resolve(); };
-    function cleanup() {
-      document.getElementById("codeConfirm").removeEventListener("click", onConfirm);
-      document.getElementById("codeCancel").removeEventListener("click", onCancel);
-    }
-    document.getElementById("codeConfirm").addEventListener("click", onConfirm);
-    document.getElementById("codeCancel").addEventListener("click", onCancel);
-  });
-}
-
-// ---------- 載入 & 顯示清單 ----------
-async function loadItems() {
-  const listArea = document.getElementById("listArea");
-  try {
-    const res = await fetch(SCRIPT_URL);
-    const data = await res.json();
-    currentItems = data.items || [];
-    renderList();
-  } catch (e) {
-    listArea.innerHTML = '<div class="empty">目前無法載入資料，請稍後再試（也可能是 SCRIPT_URL 尚未設定）</div>';
-  }
-}
-
-function renderList() {
-  const listArea = document.getElementById("listArea");
-  if (currentItems.length === 0) {
-    listArea.innerHTML = '<div class="empty">目前還沒有人填寫，當第一個吧！</div>';
-    return;
-  }
-  listArea.innerHTML = "";
-  const order = ["馭風書院", "矽晶書院", "靛織書院", "曦華書院"];
-  const sorted = [...currentItems].sort((a, b) => order.indexOf(a.house) - order.indexOf(b.house));
-  sorted.forEach((it) => {
-    const row = document.createElement("div");
-    row.className = "list-item";
-    const isMine = it.deviceId === deviceId;
-    row.innerHTML = `
-      <div>
-        <span class="house-tag tag-${it.house}">${it.house}</span>
-        <span class="dish">${escapeHtml(String(it.dish ?? ""))}</span>
-      </div>
-      <div class="item-actions">
-        ${isMine ? `<button class="edit" data-id="${it.id}">編輯</button><button class="delete" data-id="${it.id}">刪除</button>` : ""}
-      </div>
-    `;
-    listArea.appendChild(row);
-  });
-
-  listArea.querySelectorAll(".edit").forEach((btn) => btn.addEventListener("click", () => openEdit(btn.dataset.id)));
-  listArea.querySelectorAll(".delete").forEach((btn) => btn.addEventListener("click", () => deleteItem(btn.dataset.id)));
-}
-
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-// ---------- 編輯 ----------
-let editingId = null;
-function openEdit(id) {
-  const item = currentItems.find((it) => it.id === id);
-  if (!item) return;
-  editingId = id;
-  document.getElementById("editInput").value = item.dish;
-  document.getElementById("editMsg").textContent = "";
-  document.getElementById("editDialog").showModal();
-}
-document.getElementById("editCancel").addEventListener("click", () => {
-  document.getElementById("editDialog").close();
-});
-document.getElementById("editConfirm").addEventListener("click", async () => {
-  const newDish = document.getElementById("editInput").value.trim();
-  const msgEl = document.getElementById("editMsg");
-  if (!newDish) { msgEl.textContent = "請輸入餐點名稱"; return; }
-  const dup = currentItems.some((it) => it.id !== editingId && String(it.dish || "").trim().toLowerCase() === newDish.toLowerCase());
-  if (dup) { msgEl.textContent = "這道菜已經有人填寫了"; return; }
-  try {
-    const data = await callScript("edit", { id: editingId, dish: newDish, deviceId });
-    if (data.ok) {
-      document.getElementById("editDialog").close();
-      await loadItems();
-    } else {
-      msgEl.textContent = data.error || "編輯失敗";
-    }
-  } catch (e) {
-    msgEl.textContent = "網路連線異常";
-  }
-});
-
-// ---------- 刪除 ----------
-async function deleteItem(id) {
-  if (!confirm("確定要刪除這筆餐點嗎？")) return;
-  try {
-    const data = await callScript("delete", { id, deviceId });
-    if (data.ok) {
-      await loadItems();
-    } else {
-      alert(data.error || "刪除失敗");
-    }
-  } catch (e) {
-    alert("網路連線異常");
-  }
-}
-
-// ---------- 重新整理 & 自動輪詢 ----------
-document.getElementById("refreshBtn").addEventListener("click", loadItems);
-loadItems();
-setInterval(loadItems, 8000);
+alert('模擬新的一位同學：' + RANDOM_INTERESTS[Math.floor(Math.random() * RANDOM_INTERESTS.length)]);
