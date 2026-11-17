@@ -8,7 +8,7 @@
   --brick: #B4483A;
   --locked: #8A93A6;
   --radius: 10px;
-  --school-blue: #0F2150
+  --school-blue: #0F2150;
 }
 
 * {
@@ -44,30 +44,53 @@ header {
   flex-wrap: wrap;
 }
 
-.reset-btn {
+.header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: var(--gold);
-  color: var(--school-blue);
+  gap: 10px;
+}
+
+.reset-btn,
+.export-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   border: none;
   border-radius: 999px;
-  padding: 12px 22px;
-  font-size: 1.05rem;
+  padding: 11px 18px;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 3px 0 rgba(0, 0, 0, .15);
-  transition: transform .12s ease, box-shadow .12s ease;
+  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
 }
 
-.reset-btn:hover {
+.reset-btn {
+  background: var(--gold);
+  color: var(--school-blue);
+}
+
+.export-btn {
+  background: var(--school-blue);
+  color: #fff;
+}
+
+.reset-btn:hover,
+.export-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 0 rgba(0, 0, 0, .18);
 }
 
-.reset-btn:active {
+.reset-btn:active,
+.export-btn:active {
   transform: translateY(2px);
   box-shadow: 0 1px 0 rgba(0, 0, 0, .15);
+}
+
+.export-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
 }
 
 h1 {
@@ -221,7 +244,6 @@ main {
   transform: rotate(var(--tilt, 0deg)) translateY(-2px);
 }
 
-/* 選修課程：點一下直接排好全部堂數 */
 .chip.chip-clickable {
   cursor: pointer;
 }
@@ -230,7 +252,6 @@ main {
   transform: rotate(var(--tilt, 0deg)) translateY(1px);
 }
 
-/* 社團、非同步課程：維持拖曳 */
 .chip.chip-draggable {
   cursor: grab;
   touch-action: none;
@@ -248,7 +269,7 @@ main {
   letter-spacing: .02em;
 }
 
-/* ---------- 課程堆疊（同一門課多節疊在一起） ---------- */
+/* ---------- 課程堆疊 ---------- */
 .stack {
   position: relative;
   margin-bottom: 8px;
@@ -297,6 +318,45 @@ main {
   min-width: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* 匯出時才顯示的圖片頂部標題列 */
+.export-header {
+  display: none;
+}
+
+.schedule-wrap.is-exporting {
+  background: var(--paper);
+  padding: 24px;
+  border-radius: 16px;
+}
+
+.schedule-wrap.is-exporting .export-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--school-blue);
+}
+
+.export-title {
+  font-family: Georgia, "Noto Serif TC", "PingFang TC", serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--school-blue);
+}
+
+.export-meta {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* 匯出圖片時隱藏刪除按鈕與鎖頭，讓課表更乾淨 */
+.schedule-wrap.is-exporting .remove-btn,
+.schedule-wrap.is-exporting .lock-icon {
+  display: none !important;
 }
 
 .schedule-grid {
@@ -361,19 +421,9 @@ main {
 }
 
 @keyframes shake {
-
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-
-  25% {
-    transform: translateX(-5px);
-  }
-
-  75% {
-    transform: translateX(5px);
-  }
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
 .placed-chip {
@@ -429,7 +479,7 @@ main {
   opacity: .8;
 }
 
-/* ---------- Drag ghost（社團／非同步課程拖曳時的預覽） ---------- */
+/* ---------- Drag ghost ---------- */
 #ghost {
   position: fixed;
   z-index: 999;
@@ -453,26 +503,22 @@ main {
   padding: 4px 6px;
   font-size: 0.65rem;
   opacity: 0.25;
-  /* 降低整體透明度，使其極不明顯 */
   transition: opacity 0.3s ease;
   z-index: 5;
 }
 
 .site-footer:hover {
   opacity: 0.5;
-  /* 滑鼠移上去時微幅顯示，若想完全隱形可移除此段 */
 }
 
 .site-footer a {
   color: var(--ink-soft);
-  /* 使用與背景相近的低對比顏色 */
   text-decoration: none;
   letter-spacing: 0.05em;
 }
 
 /* ---------- 手機版版面（≤820px） ---------- */
 @media (max-width: 820px) {
-
   html,
   body {
     overflow: auto;
@@ -484,7 +530,6 @@ main {
     min-height: 100vh;
     padding: 14px 12px 90px;
     gap: 12px;
-    color: var(--line)
   }
 
   header {
@@ -493,9 +538,13 @@ main {
     gap: 10px;
   }
 
-  .reset-btn {
-    align-self: center;
-    padding: 9px 18px;
+  .header-actions {
+    justify-content: center;
+  }
+
+  .reset-btn,
+  .export-btn {
+    padding: 9px 16px;
     font-size: .9rem;
   }
 
@@ -531,7 +580,6 @@ main {
     flex: none;
   }
 
-  /* 課程清單改成上方可橫向滑動的一排 */
   .course-pool {
     width: 100%;
     flex-direction: row;

@@ -6,12 +6,17 @@
 <title>竹北實驗排課模擬系統</title>
 <link rel="icon" href="https://i.meee.com.tw/9A7xDcC.png" type="image/x-icon">
 <link rel="stylesheet" href="style.css">
+<!-- 引入 html2canvas 用於將課表匯出為高畫質圖片 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
 <div class="app">
   <header>
-    <button class="reset-btn" id="resetBtn">↺ 重新</button>
+    <div class="header-actions">
+      <button class="reset-btn" id="resetBtn">↺ 重新</button>
+      <button class="export-btn" id="exportBtn">📸 匯出課表</button>
+    </div>
     <h1>竹北實驗高中排課模擬系統<span id="levelLabel">第一關・國數英</span></h1>
     <div class="level-progress" id="levelProgress"></div>
   </header>
@@ -22,7 +27,12 @@
       <div id="coursePool"></div>
     </aside>
 
-    <section class="schedule-wrap">
+    <!-- 加上 id="exportTarget" 作為截圖範圍 -->
+    <section class="schedule-wrap" id="exportTarget">
+      <div class="export-header" id="exportHeader">
+        <span class="export-title">竹北實驗高中 模擬課表</span>
+        <span class="export-meta" id="exportMeta"></span>
+      </div>
       <div class="schedule-grid" id="scheduleGrid"></div>
     </section>
   </main>
@@ -31,11 +41,9 @@
 <div id="ghost" hidden></div>
 <div id="toast" class="toast"></div>
 
-<!-- 新增極不顯眼的頁尾 -->
-  <footer class="site-footer">
-    <a href="https://uschool.hcc.edu.tw/" target="_blank" rel="noopener noreferrer">Design by - 竹北實驗高中</a> & <a href="https://theoyu314159.github.io/" target="_blank" rel="noopener noreferrer">Yuyoru</a>
-  </footer>
-
+<footer class="site-footer">
+  <a href="https://uschool.hcc.edu.tw/" target="_blank" rel="noopener noreferrer">Design by - 竹北實驗高中</a> & <a href="https://theoyu314159.github.io/" target="_blank" rel="noopener noreferrer">Yuyoru</a>
+</footer>
 
 <script src="script.js"></script>
 </body>

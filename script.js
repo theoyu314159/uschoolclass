@@ -2,17 +2,6 @@
    設定區：想要新增課程或關卡，只要編輯這裡就好，不用動下面的邏輯。
    ========================================================================= */
 
-// 用「陣列」照順序放每一關的內容，玩家會照順序一關一關過。
-// count：這門課一週要排幾節（=左邊這疊卡片有幾張）。
-// allowedSlots（可省略）：如果這門課有固定節次，點選後系統會自動排進第一個還空著的格子，
-//   格式是 { day, period }，day 1~5 = 星期一~五，period 1~8 =第幾節。
-//   不寫這個欄位的話，代表可以自由排到任何空格（系統會自動找目前最早的空堂）。
-// group（可省略）：同一個 group 裡的課互相排斥——只要選了其中一堂（點了至少一節進課表），
-//   同一組的其他課就會在左邊被鎖住、不能再選，直到你把已選的那堂完全移除為止。
-//   典型用法：同一科目的能力分組 A/B/C 班，只能三選一，通常時段也會一樣。
-// letter（可省略）：跨科的字母限制——同一關裡，A/B/C 這種字母只能被一個科目用掉。
-//   例如選了國文A，數學、英文的 A 版本就會被鎖住（但數學、英文的 B、C 還是可以選）。
-//   要有這個限制的課，記得同時給 group（分辨科目）跟 letter（分辨是A/B/C哪一個）。
 const COURSE_LEVELS = [
   {
     label: '第一關・國數英',
@@ -53,7 +42,6 @@ const COURSE_LEVELS = [
         id: 'english-c', name: '英文C', color: '#4C8C5B', count: 2, group: 'english', letter: 'C',
         allowedSlots: [ {day:4, period:7}, {day:5, period:7} ]
       },
-      // 要加同科的另一個分組，複製上面一份，id 一定要改、group 要跟同科的一樣、letter 要跟A/B/C對上
     ]
   },
   {
@@ -65,7 +53,6 @@ const COURSE_LEVELS = [
       },
       { id: 'history', name: '歷史B', color:"#A6A600" , count: 2, 
         allowedSlots: [ {day:1, period:3}, {day:1, period:4}]},
-      // 之後要加課，複製上面一行，改 id / name / color / count（要固定節次再加 allowedSlots）
     ]
   },
   {        
@@ -88,21 +75,12 @@ const COURSE_LEVELS = [
         id: 'chemistry', name: '化學', color: '#C97B3D', count: 2,
         allowedSlots: [ {day:2, period:5}, {day:3, period:5} ]
       },
-      // 之後要加課，複製上面一行，改 id / name / color / count（要固定節次再加 allowedSlots）
     ]
   }
-  // 要加「第四關」的話，照上面的格式在陣列最後面再加一個 { label, courses } 物件，
-  // 其他程式碼不用改，會自動接關。
 ];
 
-// 這一份是第三關「原本、固定」的課程清單快照，用來在重設/重新計算非同步課程時，
-// 還原成沒有非同步課程的乾淨狀態，不用手動維護。
 const LEVEL3_STATIC_COURSES = COURSE_LEVELS[2].courses.slice();
 
-// 非同步線上課程設定：國文/數學/英文只要在第一關選了任何一個 A/B/C 班，
-// 公民、歷史只要在第二關各自被選了，物理/化學只要在第三關選了該科，
-// 第三關就會自動出現對應這科的「非同步」卡片，讓玩家自己拖去空堂排入。
-// count：這科的非同步課要排幾節。
 const ASYNC_COURSE_DEFS = {
   chinese:   { name: '國文（非同步）', color: '#C1543C', count: 1 },
   math:      { name: '數學（非同步）', color: '#3B6EA5', count: 1 },
@@ -113,8 +91,6 @@ const ASYNC_COURSE_DEFS = {
   chemistry: { name: '化學（非同步）', color: '#C97B3D', count: 2 },
 };
 
-// 內建、已經固定好、不能被拖走的課程
-// day: 1=星期一 ... 5=星期五   period: 1~8 節
 const LOCKED_COURSES = [
   { day: 2, period: 3, name: 'Tri-PBL', color: '#8A93A6' },
   { day: 2, period: 4, name: 'Tri-PBL', color: '#8A93A6' },
@@ -129,7 +105,6 @@ const LOCKED_COURSES = [
 const DAY_NAMES = ['星期一','星期二','星期三','星期四','星期五'];
 const PERIOD_COUNT = 8;
 
-// 按「重新歸零」的時候，會隨機挑一句顯示出來（可以自己增減／改文字）
 const RANDOM_INTERESTS = [
   '喜歡寫程式',
   '喜歡跳舞',
@@ -143,9 +118,10 @@ const RANDOM_INTERESTS = [
    ========================================================================= */
 
 let currentLevelIndex = 0;
-let poolItems = [];       // poolItems[levelIndex] = 該關還沒被排進課表的課程卡片陣列
-let dragState = null;     // { payload:{uid,id,name,color,levelIndex}, sourceCell: HTMLElement|null, fromPool:boolean }
+let poolItems = [];
+let dragState = null;
 let uidCounter = 0;
+let currentStudentTag = ''; // 記錄目前模擬的學生人設，匯出圖片時可印在標題旁
 
 const grid = document.getElementById('scheduleGrid');
 const pool = document.getElementById('coursePool');
@@ -175,12 +151,10 @@ function lockedAt(day, period){
 function buildGrid(){
   grid.innerHTML = '';
 
-  // 左上角空格
   const corner = document.createElement('div');
   corner.className = 'corner-cell';
   grid.appendChild(corner);
 
-  // 星期標題列
   DAY_NAMES.forEach(name => {
     const h = document.createElement('div');
     h.className = 'head-cell';
@@ -188,7 +162,6 @@ function buildGrid(){
     grid.appendChild(h);
   });
 
-  // 每一節
   for(let p = 1; p <= PERIOD_COUNT; p++){
     const periodCell = document.createElement('div');
     periodCell.className = 'period-cell';
@@ -215,7 +188,7 @@ function renderChipInCell(cell, payload, locked){
   cell.dataset.occupied = 'true';
   cell.dataset.locked = locked ? 'true' : 'false';
   cell.dataset.courseId = payload.id || payload.name;
-  cell._payload = payload; // 存整包資料，之後要放回左邊清單會用到
+  cell._payload = payload;
 
   const chip = document.createElement('div');
   chip.className = 'placed-chip' + (locked ? ' locked' : '');
@@ -239,7 +212,6 @@ function renderChipInCell(cell, payload, locked){
     });
     chip.appendChild(removeBtn);
 
-    // 選修課程（有固定節次）只能用 × 移除；社團、非同步課程維持拖曳搬動
     const course = findCourseDef(payload.id, payload.levelIndex);
     const flexible = !(course && course.allowedSlots);
     if(flexible){
@@ -254,7 +226,6 @@ function renderChipInCell(cell, payload, locked){
   cell.appendChild(chip);
 }
 
-// returnToPool: 從課表上移除時，要不要把這張卡片還給左邊的清單
 function clearCell(cell, returnToPool){
   if(cell.dataset.locked === 'true') return;
 
@@ -268,7 +239,6 @@ function clearCell(cell, returnToPool){
   cell._payload = null;
 }
 
-// 把課程還回它原本那一關的清單，如果玩家已經過關了，就退回那一關重新顯示
 function giveBackToPool(payload){
   const lvl = payload.levelIndex;
   poolItems[lvl].push({ uid: payload.uid, id: payload.id, name: payload.name, color: payload.color, levelIndex: lvl });
@@ -294,7 +264,7 @@ function renderPool(){
 
   level.courses.forEach(course => {
     const itemsOfCourse = remainingItems.filter(it => it.id === course.id);
-    if(itemsOfCourse.length === 0) return; // 這門課的卡片都排完了，不用再顯示
+    if(itemsOfCourse.length === 0) return;
     anyVisible = true;
     pool.appendChild(buildStackEl(course, itemsOfCourse, getLockReason(course, currentLevelIndex)));
   });
@@ -307,18 +277,15 @@ function renderPool(){
   }
 }
 
-// 算出某門課目前被排掉幾節
 function placedCountOf(course, levelIndex){
   const remaining = (poolItems[levelIndex] || []).filter(it => it.id === course.id).length;
   return course.count - remaining;
 }
 
-// 這門課如果被鎖住，回傳要顯示的鎖定原因；沒被鎖就回傳 null
 function getLockReason(course, levelIndex){
   const level = COURSE_LEVELS[levelIndex];
   if(!level) return null;
 
-  // 規則一：同一個 group（同科目）只能三選一
   if(course.group){
     const sameGroupChosen = level.courses.some(other =>
       other.id !== course.id && other.group === course.group && placedCountOf(other, levelIndex) > 0
@@ -326,7 +293,6 @@ function getLockReason(course, levelIndex){
     if(sameGroupChosen) return '🔒 已選同科其他班';
   }
 
-  // 規則二：同一個字母（A/B/C）跨科不能重複用
   if(course.letter){
     const sameLetterChosen = level.courses.some(other =>
       other.id !== course.id && other.group !== course.group && other.letter === course.letter
@@ -338,9 +304,6 @@ function getLockReason(course, levelIndex){
   return null;
 }
 
-// 把同一門課的所有剩餘卡片畫成一疊：
-// 選修課程（有固定節次）點一下就把剩下的堂數一次排好；
-// 社團、非同步課程維持拖曳，一次拖一張，疊會跟著變薄。
 function buildStackEl(course, itemsOfCourse, lockReason){
   const locked = !!lockReason;
   const wrap = document.createElement('div');
@@ -388,11 +351,9 @@ function buildStackEl(course, itemsOfCourse, lockReason){
     lockNote.textContent = lockReason;
     top.appendChild(lockNote);
   } else if(course.allowedSlots){
-    // 選修課程：點一下直接把這門課剩下的堂數全部排進去
     top.classList.add('chip-clickable');
     top.addEventListener('click', () => placeAllAutomatically(course, itemsOfCourse));
   } else {
-    // 社團、非同步課程：維持拖曳，一次拖一張
     top.classList.add('chip-draggable');
     top.addEventListener('pointerdown', e => startDrag(e, itemsOfCourse[0], null, true));
   }
@@ -401,13 +362,11 @@ function buildStackEl(course, itemsOfCourse, lockReason){
   return wrap;
 }
 
-// 把 allowedSlots 轉成看得懂的文字，例如「一 第1節、三 第1節、五 第1節」
 const DAY_SHORT = ['一','二','三','四','五'];
 function formatSlots(slots){
   return slots.map(s => DAY_SHORT[s.day - 1] + ' 第' + s.period + '節').join('、');
 }
 
-// 只讀的進度條：目前第幾關、共幾關，不能用點的切換；旁邊的「下一關」按鈕由玩家自己按
 function renderProgress(){
   levelProgress.innerHTML = '';
   COURSE_LEVELS.forEach((level, i) => {
@@ -449,9 +408,6 @@ function renderProgress(){
   }
 }
 
-// 找出「有排但沒排完」的課（可以整堂不選，但選了就要排完每一節）。
-// 非同步課程（id 開頭是 async-）是系統依你選的科目自動加的，只要出現在這一關，
-// 就一定要排進課表才算過關，不能只留在清單裡不排。
 function getIncompleteCourses(levelIndex){
   const level = COURSE_LEVELS[levelIndex];
   if(!level) return [];
@@ -473,10 +429,8 @@ function findCourseDef(id, levelIndex){
   return level ? level.courses.find(c => c.id === id) : null;
 }
 
-/* ---------------- 非同步課程：依第一、二關的選課結果動態決定 ---------------- */
+/* ---------------- 非同步課程 ---------------- */
 
-// 算出目前已經選定的科目：國文/數學/英文（第一關，只要選了 A/B/C 其中一班），
-// 公民、歷史（第二關，各自獨立判斷）。
 function computeChosenSubjects(){
   const chosen = new Set();
 
@@ -488,7 +442,7 @@ function computeChosenSubjects(){
   });
   Object.keys(groups).forEach(g => {
     const anyPlaced = groups[g].some(c => placedCountOf(c, 0) > 0);
-    if(anyPlaced) chosen.add(g); // 'chinese' / 'math' / 'english'
+    if(anyPlaced) chosen.add(g);
   });
 
   const level2 = COURSE_LEVELS[1];
@@ -497,7 +451,6 @@ function computeChosenSubjects(){
   if(civicsCourse && placedCountOf(civicsCourse, 1) > 0) chosen.add('civics');
   if(historyCourse && placedCountOf(historyCourse, 1) > 0) chosen.add('history');
 
-  // 第三關本身選修的物理／化學，選了也各自帶出非同步課程
   const physicsCourse = LEVEL3_STATIC_COURSES.find(c => c.id === 'physics');
   const chemistryCourse = LEVEL3_STATIC_COURSES.find(c => c.id === 'chemistry');
   if(physicsCourse && placedCountOf(physicsCourse, 2) > 0) chosen.add('physics');
@@ -509,14 +462,11 @@ function computeChosenSubjects(){
 function clearGridCoursesById(id, levelIndex){
   document.querySelectorAll('.schedule-cell').forEach(cell => {
     if(cell._payload && cell._payload.id === id && cell._payload.levelIndex === levelIndex){
-      clearCell(cell, false); // 課程本身已經被取消了，不用再退回清單
+      clearCell(cell, false);
     }
   });
 }
 
-// 依目前選課狀況，同步第三關的課程定義與左側清單：
-// 新選定的科目自動加入一張非同步卡片；如果玩家回頭改掉原本的選課，
-// 已經不再需要的非同步課程就會被移除（含已排在課表上的）。
 function refreshLevel3Courses(){
   const chosen = computeChosenSubjects();
   const desired = Array.from(chosen).map(subj => ({
@@ -554,13 +504,11 @@ function refreshLevel3Courses(){
 function showToast(msg){
   toast.textContent = msg;
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 1600);
+  setTimeout(() => toast.classList.remove('show'), 2000);
 }
 
-/* ---------------- 點選排課（選修課程用，一次排好全部堂數） ---------------- */
+/* ---------------- 點選排課 ---------------- */
 
-// 點一下選修課程（有固定節次的課），把它剩下的所有堂數一次排進固定的格子裡，
-// 不用點好幾下。
 function placeAllAutomatically(course, itemsOfCourse){
   const cells = Array.from(document.querySelectorAll('.schedule-cell'));
   const remainingItems = itemsOfCourse.slice();
@@ -590,7 +538,7 @@ function placeAllAutomatically(course, itemsOfCourse){
   }
 }
 
-/* ---------------- 拖曳邏輯（社團、非同步課程用，滑鼠 / 觸控通用） ---------------- */
+/* ---------------- 拖曳邏輯 ---------------- */
 
 function startDrag(e, payload, sourceCell, fromPool){
   e.preventDefault();
@@ -633,7 +581,7 @@ function onDragEnd(e){
 
   if(cell){
     if(cell === dragState.sourceCell){
-      // 放回原本的格子，不做事
+      // 不做事
     } else if(cell.dataset.locked === 'true' || cell.dataset.occupied === 'true'){
       cell.classList.add('reject');
       setTimeout(() => cell.classList.remove('reject'), 300);
@@ -641,10 +589,8 @@ function onDragEnd(e){
       renderChipInCell(cell, dragState.payload, false);
 
       if(dragState.sourceCell){
-        // 從課表上的另一格搬過來，原本的格子清空，不用碰左邊清單
         clearCell(dragState.sourceCell, false);
       } else if(dragState.fromPool){
-        // 從左邊清單拖來的：把這張卡片從清單移除，不會留著
         const items = poolItems[dragState.payload.levelIndex];
         const idx = items.findIndex(it => it.uid === dragState.payload.uid);
         if(idx > -1) items.splice(idx, 1);
@@ -657,7 +603,63 @@ function onDragEnd(e){
   dragState = null;
 }
 
+/* ---------------- 匯出課表為圖片 ---------------- */
+
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  if (typeof html2canvas === 'undefined') {
+    showToast('⚠️ 匯出元件尚未載入完成，請稍後再試');
+    return;
+  }
+
+  const exportBtn = document.getElementById('exportBtn');
+  const exportTarget = document.getElementById('exportTarget');
+  const exportMeta = document.getElementById('exportMeta');
+
+  // 填入標題副資訊（同學標籤 + 日期）
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+  exportMeta.textContent = currentStudentTag ? `同學設定：${currentStudentTag} ｜ ${dateStr}` : dateStr;
+
+  exportBtn.disabled = true;
+  exportBtn.textContent = '⏳ 產生圖片中...';
+
+  // 切換為乾淨的匯出樣式（隱藏 X 按鈕、顯示大標題）
+  exportTarget.classList.add('is-exporting');
+
+  try {
+    // 稍微等待版面重繪，並確保手機版匯出時不被橫向捲軸裁切
+    await new Promise(resolve => setTimeout(resolve, 80));
+
+    const canvas = await html2canvas(exportTarget, {
+      scale: 2, // 2倍解析度，確保文字清晰銳利
+      backgroundColor: '#EEF3EF',
+      useCORS: true,
+      windowWidth: Math.max(exportTarget.scrollWidth, 860) // 保證在手機上匯出也是完整寬版課表
+    });
+
+    const link = document.createElement('a');
+    link.download = `竹北實驗高中模擬課表_${dateStr.replace(/\//g, '')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+
+    showToast('✅ 課表圖片已下載！');
+  } catch (err) {
+    console.error(err);
+    showToast('❌ 匯出失敗，請稍後再試');
+  } finally {
+    // 還原原本的操作介面
+    exportTarget.classList.remove('is-exporting');
+    exportBtn.disabled = false;
+    exportBtn.textContent = '📸 匯出課表';
+  }
+});
+
 /* ---------------- 重新歸零 ---------------- */
+
+function assignRandomStudent() {
+  currentStudentTag = RANDOM_INTERESTS[Math.floor(Math.random() * RANDOM_INTERESTS.length)];
+  alert('模擬新的一位同學：' + currentStudentTag);
+}
 
 document.getElementById('resetBtn').addEventListener('click', () => {
   if(!confirm('確定要清空整張課表、回到第一關嗎？')) return;
@@ -669,9 +671,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   buildPoolItems();
   renderProgress();
   renderPool();
-
-  const pick = RANDOM_INTERESTS[Math.floor(Math.random() * RANDOM_INTERESTS.length)];
-  alert('模擬新的一位同學：' + pick);
+  assignRandomStudent();
 });
 
 /* ---------------- 初始化 ---------------- */
@@ -680,5 +680,4 @@ buildGrid();
 buildPoolItems();
 renderProgress();
 renderPool();
-
-alert('模擬新的一位同學：' + RANDOM_INTERESTS[Math.floor(Math.random() * RANDOM_INTERESTS.length)]);
+assignRandomStudent();
